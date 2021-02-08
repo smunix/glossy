@@ -17,8 +17,9 @@ import qualified Data.ByteString as B
 import qualified Data.ByteString.Char8 as C
 import Data.Coerce (coerce)
 import Data.FileEmbed
-import Data.Sequence
+-- import Data.Sequence
 import Graphics.Gloss
+import Graphics.Gloss.Interface.Pure.Game
 import Language.Haskell.TH.Syntax
 import Lens.Micro.Platform
 import qualified Lens.Micro.Platform as L
@@ -29,6 +30,7 @@ import TH
 data DirMove where
   LeftMove :: DirMove
   RightMove :: DirMove
+  NoneMove :: DirMove
   deriving (Eq)
 
 data DirHead where
@@ -36,8 +38,12 @@ data DirHead where
   RightHead :: DirHead
   deriving (Eq)
 
-newtype Pos a where
-  Pos :: {_pos :: Point} -> Pos a
+data Pos a where
+  Pos ::
+    { _pos :: Point,
+      _object :: a
+    } ->
+    Pos a
   deriving (Eq)
 
 makeLenses ''Pos
@@ -57,7 +63,8 @@ makeLenses ''Head
 data Person where
   Person ::
     { _moving :: Move Person,
-      _heading :: Head Person
+      _heading :: Head Person,
+      _sprite :: Int
     } ->
     Person
 
@@ -79,7 +86,7 @@ data Model where
     { _person :: Pos Person,
       _speed :: Point,
       _tiles :: Array (Int, Int) (Point, Char),
-      _frames :: Frames Seq
+      _frames :: Frames (Array Int)
     } ->
     Model
   deriving ()
@@ -108,7 +115,12 @@ render model = pictures renderTiles <> renderPerson
       model
         ^. frames
           . framesR
-          . L._head
+          . ix
+            ( model
+                ^. person
+                  . object
+                  . sprite
+            )
           & uncurry
             translate
             ( model
@@ -116,10 +128,130 @@ render model = pictures renderTiles <> renderPerson
                   . pos
             )
 
+keys :: Event -> Model -> Model
+keys (EventKey (SpecialKey KeyLeft) Down _ _) model =
+  model
+    & person . object . moving . move .~ LeftMove
+    & person . object . heading . MyLib.head .~ LeftHead
+keys (EventKey (SpecialKey KeyRight) Down _ _) model =
+  model
+    & person . object . moving . move .~ RightMove
+    & person . object . heading . MyLib.head .~ RightHead
+keys (EventKey (SpecialKey KeySpace) Down _ _) model =
+  model
+    & speed
+      . _2
+      .~ if collides
+        model
+        '*'
+        (pos' & _2 %~ (+ model ^. speed . _2))
+        then 6
+        else (-6)
+  where
+    pos' :: Point
+    !pos' = model ^. person . pos
+keys _ model =
+  model
+    & person
+      . object
+      . moving
+      . move
+      .~ NoneMove
+
+update :: Float -> Model -> Model
+update dt !model =
+  model
+    & speed %~ (updtSpeedX *** updtSpeedY)
+    & person . object . sprite
+      %~ ( \s -> case move' of
+             NoneMove -> s
+             _ -> (s + 1) `mod` 3
+         )
+    & person . pos %~ (updtPosY . updtPosX)
+  where
+    person' :: Person
+    !person' = model ^. person . object
+
+    speed' :: Point
+    !speed' = model ^. speed
+
+    speed'X :: Float
+    !speed'X = speed' ^. _1
+
+    speed'Y :: Float
+    !speed'Y = speed' ^. _2
+
+    dx' = speed'X
+    dy' = speed'Y
+
+    pos' :: Point
+    !pos' = model ^. person . pos
+
+    move' :: DirMove
+    !move' = person' ^. moving . move
+
+    updtSpeedY :: Float -> Float
+    updtSpeedY vel =
+      if collides model '*' (pos' & _2 +~ vel)
+        then -3
+        else max (vel - 0.1) (-6)
+
+    updtSpeedX :: Float -> Float
+    updtSpeedX vel = case move' of
+      RightMove -> min 5 (vel + 0.5)
+      LeftMove -> min 5 (vel + 0.5)
+      _ -> max 0 (vel - 0.5)
+
+    updtPosY :: Point -> Point
+    updtPosY p'@(!x', !y') =
+      if collides model '*' p''
+        then p'
+        else p''
+      where
+        p''@(!_, !_) = (x', y' + dy')
+
+    updtPosX :: Point -> Point
+    updtPosX p'@(!x', !y') = case move' of
+      LeftMove ->
+        if collides model '*' p'L
+          then p'
+          else p'L
+      RightMove ->
+        if collides model '*' p'R
+          then p'
+          else p'R
+      NoneMove ->
+        if speed'X > 0
+          && not
+            ( collides
+                model
+                '*'
+                p'N
+            )
+          then p'N
+          else p'
+      where
+        p'R@(!_, !_) = (x' + dx', y')
+        p'L@(!_, !_) = (x' - dx', y')
+        !p'N = case person' ^. heading . MyLib.head of
+          LeftHead -> p'L
+          RightHead -> p'R
+
+collides :: Model -> Char -> Point -> Bool
+collides model c p =
+  model
+    ^.. tiles
+      . folded
+      . filtered
+        ( \(p', c') ->
+            c == c' && isHit p p'
+        )
+      & not . null
+
 window :: Display
 window =
   InWindow
-    "Play with Kayla"
+    "Play Mario with Kayla"
     ( hasWidth @Display,
       hasHeight @Display
     )
@@ -171,7 +303,7 @@ instance Inj (Array (Int, Int) (Point, Char)) B.ByteString where
       & array bounds'
     where
       bstrs' :: [] B.ByteString
-      bstrs' = bstr & C.lines & Prelude.reverse
+      bstrs' = bstr & C.lines & reverse
 
       chars :: [] B.ByteString -> [] ((Int, Int), (Point, Char))
       chars = go 0 0 []
@@ -215,7 +347,7 @@ instance Inj (Array (Int, Int) (Point, Char)) B.ByteString where
             ^. ix 0
             & C.length,
           bstrs'
-            & Prelude.length
+            & length
         )
 
       bounds' :: ((Int, Int), (Int, Int))
@@ -228,7 +360,15 @@ someFunc = do
   let model1 :: Model
       model1 =
         Model
-          { _person = Pos (0.0, 0.0),
+          { _person =
+              Pos
+                (0.0, 0.0)
+                Person
+                  { _moving = Move RightMove,
+                    _heading = Head RightHead,
+                    _sprite = 0,
+                    ..
+                  },
             _speed = (0, -6),
             _tiles = $(levelFile "level.txt") & inj,
             _frames =
@@ -242,7 +382,7 @@ someFunc = do
                       $(imageFile "left6.bmp")
                     ]
                       & inj
-                      & fromList,
+                      & listArray (0, 5),
                   _framesR =
                     [ $(imageFile "right1.bmp"),
                       $(imageFile "right2.bmp"),
@@ -252,7 +392,7 @@ someFunc = do
                       $(imageFile "right6.bmp")
                     ]
                       & inj
-                      & fromList,
+                      & listArray (0, 5),
                   _framesFood =
                     $(imageFile "mushroom.bmp")
                       & inj,
@@ -264,31 +404,38 @@ someFunc = do
 
       model0 :: IO Model
       model0 = do
-        let _person = Pos (0.0, 0.0)
-            _speed = (0, -6)
+        let _person =
+              Pos
+                (0.0, 0.0)
+                Person
+                  { _moving = Move RightMove,
+                    _heading = Head RightHead,
+                    _sprite = 0,
+                    ..
+                  }
+
+            _speed = (1, 1)
             _tiles = $(levelFile "level.txt") & inj
 
         _framesFood <- loadBMP "kaze/assets/images/mushroom.bmp"
         _framesTile <- loadBMP "kaze/assets/images/tilem.bmp"
         _framesL <-
-          [ "kaze/assets/images/mario.left.16x32.1.bmp",
-            "kaze/assets/images/mario.left.16x32.2.bmp",
-            "kaze/assets/images/mario.left.16x32.3.bmp",
-            "kaze/assets/images/mario.left.16x32.4.bmp"
+          [ "kaze/assets/images/mario.left.32x56.1.bmp",
+            "kaze/assets/images/mario.left.32x56.2.bmp",
+            "kaze/assets/images/mario.left.32x56.3.bmp"
             ]
             <&> loadBMP
             & sequence
-            <&> fromList
+            <&> listArray (0, 2)
 
         _framesR <-
-          [ "kaze/assets/images/mario.right.16x32.1.bmp",
-            "kaze/assets/images/mario.right.16x32.2.bmp",
-            "kaze/assets/images/mario.right.16x32.3.bmp",
-            "kaze/assets/images/mario.right.16x32.4.bmp"
+          [ "kaze/assets/images/mario.right.32x56.1.bmp",
+            "kaze/assets/images/mario.right.32x56.2.bmp",
+            "kaze/assets/images/mario.right.32x56.3.bmp"
             ]
             <&> loadBMP
             & sequence
-            <&> fromList
+            <&> listArray (0, 2)
 
         let _frames = Frames {..}
 
@@ -308,5 +455,5 @@ someFunc = do
     fps
     model'
     render
-    (\e w -> w)
-    (\dt w -> w)
+    keys
+    update
