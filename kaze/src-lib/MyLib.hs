@@ -111,22 +111,12 @@ render model = pictures renderTiles <> renderPerson
       _ -> mempty
 
     renderPerson :: Picture
-    renderPerson =
-      model
-        ^. frames
-          . framesR
-          . ix
-            ( model
-                ^. person
-                  . object
-                  . sprite
-            )
-          & uncurry
-            translate
-            ( model
-                ^. person
-                  . pos
-            )
+    renderPerson = frames'D
+      where
+        frames'D =
+          case model ^. person . object . heading . MyLib.head of
+            RightHead -> model ^. frames . framesR . ix (model ^. person . object . sprite) & uncurry translate (model ^. person . pos)
+            LeftHead -> model ^. frames . framesL . ix (model ^. person . object . sprite) & uncurry translate (model ^. person . pos)
 
 keys :: Event -> Model -> Model
 keys (EventKey (SpecialKey KeyLeft) Down _ _) model =
