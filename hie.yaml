@@ -1,0 +1,19 @@
+cradle:
+  cabal:
+    - path: "./geometry/src-lib"
+      component: "lib:geometry"
+
+    - path: "./geometry/src-exe/Main.hs"
+      component: "geometry:exe:geometry"
+
+    - path: "./geometry/test"
+      component: "geometry:test:geometry-test"
+
+    - path: "./kaze/src-lib"
+      component: "lib:kaze"
+
+    - path: "./kaze/src-exe/Main.hs"
+      component: "kaze:exe:kaze"
+
+    - path: "./kaze/test"
+      component: "kaze:test:kaze-test"
