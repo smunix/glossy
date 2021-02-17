@@ -17,10 +17,15 @@
             doCheck = false;
             doHaddock = false;
           });
+          withVersion = drv : overrideCabal drv (o: {
+            version = o.version + "-${nixpkgs.lib.substring 0 8 self.lastModifiedDate}.${self.shortRev or "dirty"}";
+          });
       in rec {
         packages = flattenTree rec {
-          kaze = withGloss (callCabal2nix "kaze" ./kaze {});
-          geometry = withGloss (callCabal2nix "geometry" ./geometry {});
+          kaze = withVersion (withGloss (callCabal2nix "kaze" ./kaze {}));
+          geometry = withVersion (withGloss (callCabal2nix "geometry" ./geometry {}));
+          ezyang-com = withVersion (callCabal2nix "ezyang-com" ./ezyang.com {});
+          doisinkidney-com = withVersion (callCabal2nix "doisinkidney-com" ./doisinkidney.com {});
         };
       });
 }

@@ -1,5 +1,23 @@
 cradle:
   cabal:
+    - path: "./doisinkidney.com/./"
+      component: "lib:doisinkidney-com"
+
+    - path: "./doisinkidney.com/tree"
+      component: "doisinkidney-com:lib:tree"
+
+    - path: "./doisinkidney.com/circular-programming"
+      component: "doisinkidney-com:lib:circular-programming"
+
+    - path: "./doisinkidney.com/test"
+      component: "doisinkidney-com:test:doisinkidney-com-test"
+
+    - path: "./ezyang.com/lib"
+      component: "lib:ezyang-com"
+
+    - path: "./ezyang.com/test"
+      component: "ezyang-com:test:ezyang-com-test"
+
     - path: "./geometry/src-lib"
       component: "lib:geometry"
 
