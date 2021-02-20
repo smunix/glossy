@@ -9,8 +9,20 @@ cradle:
     - path: "./doisinkidney.com/circular-programming"
       component: "doisinkidney-com:lib:circular-programming"
 
+    - path: "./doisinkidney.com/convolve"
+      component: "doisinkidney-com:lib:convolve"
+
+    - path: "./doisinkidney.com/fib"
+      component: "doisinkidney-com:lib:fibonacci"
+
     - path: "./doisinkidney.com/test"
       component: "doisinkidney-com:test:doisinkidney-com-test"
+
+    - path: "./doisinkidney.com/benchmarks/CatalanBench.hs"
+      component: "doisinkidney-com:bench:doisinkidney-com-catalan-bench"
+
+    - path: "./doisinkidney.com/benchmarks/FibBench.hs"
+      component: "doisinkidney-com:bench:doisinkidney-com-fib-bench"
 
     - path: "./ezyang.com/lib"
       component: "lib:ezyang-com"

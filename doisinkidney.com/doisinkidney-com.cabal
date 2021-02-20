@@ -17,32 +17,50 @@ category:            Development
 extra-source-files:  CHANGELOG.md
 
 common common-extensions
-  default-extensions: GADTs
-                      ScopedTypeVariables                              
-                      
+  default-extensions: BlockArguments
+                      DataKinds
+                      FlexibleContexts                        
+                      FlexibleInstances
+                      GADTs
+                      KindSignatures
+                      MultiParamTypeClasses                                                
+                      ScopedTypeVariables
+                      TypeApplications                                                      
+  ghc-options: -ddump-simpl -dsuppress-uniques -dsuppress-type-applications -dsuppress-coercions -dsuppress-module-prefixes
+
+common common-bench
+  default-language:    Haskell2010
+  build-depends:       base
+                     , doisinkidney-com                      
+                     , gauge
+  ghc-options: -O2
+        
 library
-  import: common-extensions  
+  import: common-extensions
   exposed-modules:     MyLib
   reexported-modules: Circular.RepMin
-                    , TABA.Convolve                    
+                    , Taba.Convolve
+                    , Fib.Fib
   build-depends:       base
                      , tree
                      , circular-programming
-                     , convolve                       
+                     , convolve
+                     , fibonacci
   mixins:              circular-programming (RepMin as Circular.RepMin)
-                     , convolve (Convolve as TABA.Convolve)
+                     , convolve (Convolve as Taba.Convolve)
+                     , fibonacci (Fib as Fib.Fib)                       
                      , tree (Tree as Tree.Tree)
   default-language:    Haskell2010
 
 library tree
-  import: common-extensions  
+  import: common-extensions
   hs-source-dirs: tree
   exposed-modules: Tree
   build-depends: base                   
   default-language:    Haskell2010
                        
 library circular-programming
-  import: common-extensions  
+  import: common-extensions
   exposed-modules:     RepMin
   build-depends:       base
                      , tree
@@ -51,7 +69,7 @@ library circular-programming
   default-language:    Haskell2010
                                  
 library convolve
-  import: common-extensions  
+  import: common-extensions
   exposed-modules:     Convolve
   build-depends:       base
                      , tree
@@ -59,9 +77,33 @@ library convolve
   hs-source-dirs:      convolve
   default-language:    Haskell2010
                                  
+library fibonacci
+  import: common-extensions
+  exposed-modules:     Fib
+  build-depends:       base
+                     , tree
+                     , array                       
+  mixins:              tree (Tree as Tree.Tree)                       
+  hs-source-dirs:      fib
+  default-language:    Haskell2010
+                                 
 test-suite doisinkidney-com-test
+  import: common-extensions
   default-language:    Haskell2010
   type:                exitcode-stdio-1.0
   hs-source-dirs:      test
   main-is:             MyLibTest.hs
-  build-depends:       base ^>=4.14.1.0
+  build-depends:       base
+                     , gauge
+
+benchmark doisinkidney-com-catalan-bench
+  import: common-bench, common-extensions
+  type:                exitcode-stdio-1.0
+  hs-source-dirs:      benchmarks
+  main-is:             CatalanBench.hs
+               
+benchmark doisinkidney-com-fib-bench
+  import: common-bench, common-extensions
+  type:                exitcode-stdio-1.0
+  hs-source-dirs:      benchmarks
+  main-is:             FibBench.hs
