@@ -6,6 +6,7 @@
 module Convolve where
 
 import Control.Arrow
+import Data.Array
 
 -- | url : https://doisinkidney.com/posts/2018-02-17-single-pass-huffman.html#ref-bird_using_1984
 convolve :: forall a b. [] a -> [] b -> [] (a, b)
@@ -57,6 +58,35 @@ catalan' plus'op plus'zero mult'op n c0 = r'
         walk'cats (c' : cs') k = walk'cats cs' \s (c : cs) -> k s cs `plus'op` (c `mult'op` c')
 
 {- SPECIALIZE catalan' :: (Int -> Int -> Int) -> Int -> (Int -> Int -> Int) -> Int -> Int -> Int -}
+{- SPECIALIZE catalan' :: (Float -> Float -> Float) -> Float -> (Float -> Float -> Float) -> Float -> Float -> Float -}
+{- SPECIALIZE catalan' :: (Double -> Double -> Double) -> Double -> (Double -> Double -> Double) -> Double -> Double -> Double -}
 
 -- catalan :: Int -> Int -> Int
 catalan = catalan' @Int @Int @Int (+) 0 (*)
+
+catalan'naive :: (Eq a, Num a, Enum a) => a -> a -> a
+catalan'naive 0 = 1
+catalan'naive !n = sum [(catalan'naive i) * catalan'naive (n - i -1) | i <- [0 .. n -1]]
+
+{- SPECIALIZE catalan'naive :: Int -> Int -> Int -}
+{- SPECIALIZE catalan'naive :: Float -> Float -> Float -}
+{- SPECIALIZE catalan'naive :: Double -> Double -> Double -}
+
+catalan'' :: forall a n t. (Num a, Num n, Eq n, Enum n, Ix n) => (a -> t -> a) -> a -> (a -> a -> t) -> n -> a -> a
+catalan'' plus'op plus'zero mult'op n c0 = error "nyi"
+  where
+    f :: ([a] -> a) -> n -> n -> a
+    f k 0 0 = k [c0]
+    f k i j = k [d x (j - x) | x <- [i .. j]]
+
+    d :: n -> n -> a
+    d i j = ds ! (i, j)
+
+    ds :: Array (n, n) a
+    ds = array bounds [((i, j), f kfn i j) | (i, j) <- range bounds]
+
+    bounds :: ((n, n), (n, n))
+    bounds = ((0, 0), (n, n))
+
+    kfn :: [a] -> a
+    kfn = error "not implemented"

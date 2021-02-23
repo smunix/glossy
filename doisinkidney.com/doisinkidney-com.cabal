@@ -72,6 +72,7 @@ library convolve
   import: common-extensions
   exposed-modules:     Convolve
   build-depends:       base
+                     , array                       
                      , tree
   mixins:              tree (Tree as Tree.Tree)                       
   hs-source-dirs:      convolve
