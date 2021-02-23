@@ -64,7 +64,7 @@ catalan' plus'op plus'zero mult'op n c0 = r'
 -- catalan :: Int -> Int -> Int
 catalan = catalan' @Int @Int @Int (+) 0 (*)
 
-catalan'naive :: (Eq a, Num a, Enum a) => a -> a -> a
+catalan'naive :: (Eq a, Num a, Enum a) => a -> a
 catalan'naive 0 = 1
 catalan'naive !n = sum [(catalan'naive i) * catalan'naive (n - i -1) | i <- [0 .. n -1]]
 
