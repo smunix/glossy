@@ -66,11 +66,23 @@ catalan = catalan' @Int @Int @Int (+) 0 (*)
 
 catalan'naive :: (Eq a, Num a, Enum a) => a -> a
 catalan'naive 0 = 1
-catalan'naive !n = sum [(catalan'naive i) * catalan'naive (n - i -1) | i <- [0 .. n -1]]
+catalan'naive !n = sum [catalan'naive i * catalan'naive (n - i -1) | i <- [0 .. n -1]]
 
 {- SPECIALIZE catalan'naive :: Int -> Int -> Int -}
 {- SPECIALIZE catalan'naive :: Float -> Float -> Float -}
 {- SPECIALIZE catalan'naive :: Double -> Double -> Double -}
+
+catalan'memoization :: (Eq a, Num a, Enum a, Ix a) => a -> a
+catalan'memoization n = d ! n
+  where
+    bounds = (0, n)
+    f 0 = 1
+    f k = sum [d ! i * d ! (k - i -1) | i <- [0 .. (k -1)]]
+    d = array bounds [(i, f i) | i <- range bounds]
+
+{- SPECIALIZE catalan'memoization :: Int -> Int -> Int -}
+{- SPECIALIZE catalan'memoization :: Float -> Float -> Float -}
+{- SPECIALIZE catalan'memoization :: Double -> Double -> Double -}
 
 catalan'' :: forall a n t. (Num a, Num n, Eq n, Enum n, Ix n) => (a -> t -> a) -> a -> (a -> a -> t) -> n -> a -> a
 catalan'' plus'op plus'zero mult'op n c0 = error "nyi"
